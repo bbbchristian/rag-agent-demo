@@ -366,7 +366,7 @@ def rag_retrieve(state: RAGAgentState) -> dict:
         metas.append({'brand': r['brand'], 'param': r['param_name'], 'group': r['param_group']})
         ids.append(str(r['id']))
 
-    vs = Chroma.from_texts(docs, LocalEmb(), metadatas=metas, ids=ids, collection_name="vp")
+    vs = Chroma.from_texts(docs, LocalEmb(), metadatas=metas, ids=ids, collection_name="vehicle_params")
     results = vs.similarity_search(state["question"], k=5)
     return {"contexts": [d.page_content for d in results]}
 
