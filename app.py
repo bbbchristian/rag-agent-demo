@@ -125,11 +125,14 @@ def get_vector_store():
     from langchain_community.vectorstores import Chroma
 
     if os.path.exists(CHROMA_PATH):
-        return Chroma(
-            persist_directory=CHROMA_PATH,
-            embedding_function=get_embeddings(),
-            collection_name="vehicle_params",
-        )
+        try:
+            return Chroma(
+                persist_directory=CHROMA_PATH,
+                embedding_function=get_embeddings(),
+                collection_name="vehicle_params",
+            )
+        except Exception:
+            pass  # fall through to rebuild
 
     # Build from scratch using existing SQLite data
     conn = sqlite3.connect(DB_PATH)
@@ -169,7 +172,7 @@ def get_vector_store():
         persist_directory=CHROMA_PATH,
         collection_name="vehicle_params",
     )
-    vector_store.persist()
+    # Cloud ephemeral: no persist needed
     return vector_store
 
 
