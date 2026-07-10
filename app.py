@@ -360,11 +360,13 @@ def rag_generate(state: RAGAgentState) -> dict:
     matched = [doc for doc in contexts if any(k in doc.lower() for k in keywords)]
 
     if matched:
-        result = "Based on the database, here are the matching parameters:\n\n"
-        result += "\n".join(matched)
+        result = "Based on the database, here are the matching parameters:\n"
+        for doc in matched:
+            result += "- " + doc + "\n"
     else:
-        result = "Here is the complete parameter database:\n\n"
-        result += "\n".join(contexts)
+        result = "Here is the complete parameter database:\n"
+        for doc in contexts:
+            result += "- " + doc + "\n"
 
     return {"final_answer": result}
 
