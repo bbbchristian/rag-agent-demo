@@ -109,13 +109,30 @@ def get_llm():
 
 @st.cache_resource(show_spinner="🔤 Loading embeddings...")
 def get_embeddings():
-    from langchain_openai import OpenAIEmbeddings
+    # Try remote embedding API first (OpenAI / DeepSeek compatible)
+    if EMBEDDING_API_KEY and EMBEDDING_API_KEY != "sk-your-api-key-here":
+        try:
+            from langchain_openai import OpenAIEmbeddings
+            kwargs = dict(model=EMBEDDING_MODEL, api_key=EMBEDDING_API_KEY)
+            if EMBEDDING_BASE_URL:
+                kwargs["base_url"] = EMBEDDING_BASE_URL
+            emb = OpenAIEmbeddings(**kwargs)
+            emb.embed_query("test")
+            return emb
+        except Exception:
+            pass
+    # Fallback: ChromaDB built-in ONNX embedding (free, no API key needed)
+    from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
 
-    kwargs = dict(model=EMBEDDING_MODEL, api_key=EMBEDDING_API_KEY)
-    if EMBEDDING_BASE_URL:
-        kwargs["base_url"] = EMBEDDING_BASE_URL
-    return OpenAIEmbeddings(**kwargs)
+    class OnnxEmbeddings:
+        def __init__(self):
+            self._ef = ONNXMiniLM_L6_V2()
+        def embed_query(self, text):
+            return list(self._ef([text])[0])
+        def embed_documents(self, texts):
+            return [list(v) for v in self._ef(texts)]
 
+    return OnnxEmbeddings()
 
 @st.cache_resource(show_spinner="📚 Loading vector database...")
 def get_vector_store():
