@@ -337,17 +337,38 @@ class RAGAgentState(TypedDict):
 
 
 def rag_retrieve(state: RAGAgentState) -> dict:
-    """Node 1: Load all vehicle parameters as context for the LLM."""
+    """Node 1: Semantic search via ChromaDB."""
+    from langchain_community.vectorstores import Chroma
+    from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
+
+    class LocalEmb:
+        '''ChromaDB ONNX embedding (no API key needed).'''
+        def __init__(self):
+            self._ef = ONNXMiniLM_L6_V2()
+        def embed_query(self, text):
+            return list(self._ef([text])[0])
+        def embed_documents(self, texts):
+            return [list(v) for v in self._ef(texts)]
+
+    # Build vector store from SQLite data
     conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT brand, model, system, param_name, param_group, description FROM vehicle_parameters")
-    rows = cursor.fetchall()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM vehicle_parameters")
+    rows = cur.fetchall()
+    cols = [desc[0] for desc in cur.description]
     conn.close()
-    contexts = []
+
+    docs, metas, ids = [], [], []
     for row in rows:
-        text = f"Brand: {row[0]} | Model: {row[1]} | System: {row[2]} | Param: {row[3]} | Group: {row[4]} | Desc: {row[5]}"
-        contexts.append(text)
-    return {"contexts": contexts}
+        r = dict(zip(cols, row))
+        text = f"Brand: {r['brand']} | Model: {r['model']} | System: {r['system']} | Param: {r['param_name']} | Group: {r['param_group']} | Type: {r['data_type']} | Desc: {r['description']}"
+        docs.append(text)
+        metas.append({'brand': r['brand'], 'param': r['param_name'], 'group': r['param_group']})
+        ids.append(str(r['id']))
+
+    vs = Chroma.from_texts(docs, LocalEmb(), metadatas=metas, ids=ids, collection_name="vp")
+    results = vs.similarity_search(state["question"], k=5)
+    return {"contexts": [d.page_content for d in results]}
 
 
 def rag_generate(state: RAGAgentState) -> dict:
@@ -363,7 +384,7 @@ def rag_generate(state: RAGAgentState) -> dict:
 Database:
 {context_block}
 
-Question: {state[question]}
+Question: {state["question"]}
 
 Answer using ONLY the database above. Refer to specific parameter names and values."""
         response = llm.invoke(prompt)
