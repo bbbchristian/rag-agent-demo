@@ -345,21 +345,23 @@ def rag_retrieve(state: RAGAgentState) -> dict:
 
 
 def rag_generate(state: RAGAgentState) -> dict:
-    """Node 2: LLM generates answer based on retrieved context."""
+    """Node 2: LLM answers based on the full parameter database."""
     llm = get_llm()
-    context_block = "\n\n".join(f"--- Doc {i+1} ---\n{doc}" for i, doc in enumerate(state["contexts"]))
+    context_block = "\n".join(state["contexts"])
 
-    prompt = f"""You are a vehicle parameter expert. Answer the question based ONLY on the retrieved context below.
+    prompt = f"""You are a vehicle parameter expert. Below is the complete database of vehicle parameters.
 
-Context:
+DATABASE:
 {context_block}
 
-Question: {state['question']}
+Question: {state["question"]}
 
-Provide a clear, specific answer referencing actual parameter names and values from the context.
-If the context doesn't contain enough information, say so clearly. Keep it under 3 paragraphs."""
+Answer the question using ONLY the information from the database above.
+Refer to specific parameter names, brands, and values.
+If the database doesn't contain the requested information, say so clearly."""
     response = llm.invoke(prompt)
     return {"final_answer": response.content}
+
 
 
 def build_rag_agent():
