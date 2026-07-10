@@ -128,9 +128,9 @@ def get_embeddings():
         def __init__(self):
             self._ef = ONNXMiniLM_L6_V2()
         def embed_query(self, text):
-            return list(self._ef([text])[0])
+            return [float(v) for v in self._ef([text])[0]]
         def embed_documents(self, texts):
-            return [list(v) for v in self._ef(texts)]
+            return [[float(v) for v in vec] for vec in self._ef(texts)]
 
     return OnnxEmbeddings()
 
@@ -346,9 +346,9 @@ def rag_retrieve(state: RAGAgentState) -> dict:
         def __init__(self):
             self._ef = ONNXMiniLM_L6_V2()
         def embed_query(self, text):
-            return list(self._ef([text])[0])
+            return [float(v) for v in self._ef([text])[0]]
         def embed_documents(self, texts):
-            return [list(v) for v in self._ef(texts)]
+            return [[float(v) for v in vec] for vec in self._ef(texts)]
 
     # Build vector store from SQLite data
     conn = sqlite3.connect(DB_PATH)
