@@ -351,22 +351,22 @@ def rag_retrieve(state: RAGAgentState) -> dict:
 
 
 def rag_generate(state: RAGAgentState) -> dict:
-    """Node 2: LLM answers based on the full parameter database."""
-    llm = get_llm()
-    context_block = "\n".join(state["contexts"])
+    """Node 2: Format retrieved data as readable answer (no API call)."""
+    question = state["question"].lower()
+    contexts = state["contexts"]
 
-    prompt = f"""You are a vehicle parameter expert. Below is the complete database of vehicle parameters.
+    # Simple keyword filtering
+    keywords = set(question.split())
+    matched = [doc for doc in contexts if any(k in doc.lower() for k in keywords)]
 
-DATABASE:
-{context_block}
+    if matched:
+        result = "Based on the database, here are the matching parameters:\n\n"
+        result += "\n".join(matched)
+    else:
+        result = "Here is the complete parameter database:\n\n"
+        result += "\n".join(contexts)
 
-Question: {state["question"]}
-
-Answer the question using ONLY the information from the database above.
-Refer to specific parameter names, brands, and values.
-If the database doesn't contain the requested information, say so clearly."""
-    response = llm.invoke(prompt)
-    return {"final_answer": response.content}
+    return {"final_answer": result}
 
 
 
