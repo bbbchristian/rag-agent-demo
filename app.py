@@ -337,10 +337,16 @@ class RAGAgentState(TypedDict):
 
 
 def rag_retrieve(state: RAGAgentState) -> dict:
-    """Node 1: Retrieve relevant documents from ChromaDB."""
-    vector_store = get_vector_store()
-    docs = vector_store.similarity_search(state["question"], k=5)
-    contexts = [doc.page_content for doc in docs]
+    """Node 1: Load all vehicle parameters as context for the LLM."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT brand, model, system, param_name, param_group, description FROM vehicle_parameters")
+    rows = cursor.fetchall()
+    conn.close()
+    contexts = []
+    for row in rows:
+        text = f"Brand: {row[0]} | Model: {row[1]} | System: {row[2]} | Param: {row[3]} | Group: {row[4]} | Desc: {row[5]}"
+        contexts.append(text)
     return {"contexts": contexts}
 
 
